@@ -1,5 +1,5 @@
+@require: option
 @require: list
-
 @import: ../expect
 @import: test-case-result
 @import: test-run-result
@@ -24,21 +24,25 @@ end = struct
         let case-result = TestCaseResult.of-test (|
           description = description;
           status = TestCaseResultStatus.success;
+          message = None;
         |) in
         TestRunResult.make (|
           run = 1;
           success = 1;
-          detail = case-result
+          detail = case-result;
+          message = None;
         |)
       else
         let case-result = TestCaseResult.of-test (|
           description = description;
           status = TestCaseResultStatus.fail;
+          message = ExpectResult.get-msg result;
         |) in
         TestRunResult.make (|
           run = 1;
           success = 0;
           detail = case-result;
+          message = ExpectResult.get-msg result;
         |) in
     (|
       description = description;
@@ -60,7 +64,8 @@ end = struct
       TestRunResult.make (|
         run = run;
         success = success;
-        detail = detail
+        detail = detail;
+        message = None
       |)
     in
     let test-runner () =

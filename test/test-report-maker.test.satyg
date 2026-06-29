@@ -1,3 +1,4 @@
+@require: option
 @import: lib/spy
 @import: ../src/expect
 @import: ../src/test
@@ -41,7 +42,9 @@ Test run report
         detail = TestCaseResult.of-test (|
           description = `mock test case`;
           status = TestCaseResultStatus.success;
-        |)
+          message = None;
+        |);
+        message = None;
       |) in
       let actual = run-result |> TestReportMaker.make-report in
       actual |> string-same expected |> Expect.is-true
@@ -55,7 +58,9 @@ Test run report
         detail = TestCaseResult.of-test (|
           description = `mock test case`;
           status = TestCaseResultStatus.fail;
-        |)
+          message = None;
+        |);
+        message = None;
       |) in
       let actual = run-result |> TestReportMaker.make-report in
       actual |> string-same expected |> Expect.is-true
@@ -72,6 +77,7 @@ Test run report
             of-test (|
               description = `test case at level 1`;
               status = TestCaseResultStatus.success;
+              message = None;
             |);
             of-describe (|
               description = `level 2 describe`;
@@ -79,15 +85,18 @@ Test run report
                 of-test (|
                   description = `test case at level 2 success`;
                   status = TestCaseResultStatus.success;
+                  message = None;
                 |);
                 of-test (|
                   description = `test case at level 2 fail`;
                   status = TestCaseResultStatus.fail;
+                  message = None;
                |);
               ]
             |)
           ]
-        |)
+        |);
+        message = None;
       |) in
       let actual = run-result |> TestReportMaker.make-report in
       actual |> string-same expected |> Expect.is-true

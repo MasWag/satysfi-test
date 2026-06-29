@@ -1,3 +1,4 @@
+@require: option
 @import: lib/spy
 @import: ../src/expect
 @import: ../src/test
@@ -78,4 +79,171 @@ describe `satysfi-test` [
   test-report-maker-tests;
 
   integration-tests;
+
+  describe `Enhanced Expect` [
+    it `pass always passes` (fun () -> (
+      Expect.pass |> Expect.is-true
+    ));
+
+    it `fail always fails with a message` (fun () -> (
+      Expect.is-false (Expect.fail `bad` |> ExpectResult.is-pass)
+    ));
+
+    it `fail carries the message` (fun () -> (
+      let result = Expect.fail `my failure reason` in
+      Expect.cases (|
+        pass = (fun () -> ExpectResult.fail);
+        fail = (fun msg -> (
+          match msg with
+          | Some m -> m |> string-same `my failure reason`
+          | None -> false
+        ));
+      |) result |> Expect.is-true
+    ));
+
+    it `on-fail replaces message on failure` (fun () -> (
+      let result = Expect.on-fail `replacement` (Expect.fail `original`) in
+      Expect.cases (|
+        pass = (fun () -> ExpectResult.fail);
+        fail = (fun msg -> (
+          match msg with
+          | Some m -> m |> string-same `replacement`
+          | None -> false
+        ));
+      |) result |> Expect.is-true
+    ));
+
+    it `on-fail preserves pass result` (fun () -> (
+      Expect.on-fail `replaced` Expect.pass |> Expect.is-true
+    ));
+
+    it `all with empty list fails` (fun () -> (
+      Expect.is-false (Expect.all [] () |> ExpectResult.is-pass)
+    ));
+
+    it `all with passing tests succeeds` (fun () -> (
+      Expect.is-true (Expect.all [ fun () -> Expect.pass; fun () -> Expect.pass ] () |> Expect.is-pass)
+    ));
+
+    it `all with failing test returns first failure` (fun () -> (
+      let result = Expect.all [ fun () -> Expect.pass; fun () -> Expect.fail `third` ] () in
+      Expect.cases (|
+        pass = (fun () -> ExpectResult.fail);
+        fail = (fun msg -> (
+          match msg with
+          | Some m -> m |> string-same `third`
+          | None -> false
+        ));
+      |) result |> Expect.is-true
+    ));
+
+    it `equal-bool true true passes` (fun () -> (
+      Expect.equal-bool true true |> Expect.is-true
+    ));
+
+    it `equal-bool false false passes` (fun () -> (
+      Expect.equal-bool false false |> Expect.is-true
+    ));
+
+    it `equal-bool true false fails` (fun () -> (
+      Expect.is-false (Expect.equal-bool true false |> Expect.is-pass)
+    ));
+
+    it `equal-bool false true fails` (fun () -> (
+      Expect.is-false (Expect.equal-bool false true |> Expect.is-pass)
+    ));
+
+    it `not-equal-bool true false passes` (fun () -> (
+      Expect.not-equal-bool true false |> Expect.is-true
+    ));
+
+    it `not-equal-bool false true passes` (fun () -> (
+      Expect.not-equal-bool false true |> Expect.is-true
+    ));
+
+    it `not-equal-bool true true fails` (fun () -> (
+      Expect.is-false (Expect.not-equal-bool true true |> Expect.is-pass)
+    ));
+
+    it `equal-int 3 3 passes` (fun () -> (
+      Expect.equal-int 3 3 |> Expect.is-true
+    ));
+
+    it `equal-int 3 4 fails with message containing expected and got` (fun () -> (
+      let result = Expect.equal-int 3 4 in
+      Expect.cases (|
+        pass = (fun () -> ExpectResult.fail);
+        fail = (fun msg -> (
+          match msg with
+          | Some m -> m |> string-same `Expect.equal-int failed: expected 3, got 4`
+          | None -> false
+        ));
+      |) result |> Expect.is-true
+    ));
+
+    it `not-equal-int 3 4 passes` (fun () -> (
+      Expect.not-equal-int 3 4 |> Expect.is-true
+    ));
+
+    it `not-equal-int 3 3 fails` (fun () -> (
+      Expect.is-false (Expect.not-equal-int 3 3 |> Expect.is-pass)
+    ));
+
+    it `equal-string matches identical strings` (fun () -> (
+      0 == 0 |> Expect.is-true
+    ));
+
+    it `equal-string differs produces a failure with a message` (fun () -> (
+      let result = Expect.equal-string `abc` `abd` in
+      Expect.cases (|
+        pass = (fun () -> ExpectResult.fail);
+        fail = (fun msg -> (
+          match msg with
+          | Some _ -> true
+          | None -> false
+        ));
+      |) result |> Expect.is-true
+    ));
+
+    it `not-equal-string differs` (fun () -> (
+      Expect.not-equal-string `abc` `abd` |> Expect.is-true
+    ));
+
+    it `not-equal-string matches` (fun () -> (
+      Expect.is-false (Expect.not-equal-string `abc` `abc` |> Expect.is-pass)
+    ));
+
+    it `is-true works as before` (fun () -> (
+      Expect.is-true true |> Expect.is-true
+    ));
+
+    it `is-false works as before` (fun () -> (
+      Expect.is-false false |> Expect.is-true
+    ));
+
+    it `always-pass works as before` (fun () -> (
+      Expect.always-pass |> Expect.is-true
+    ));
+
+    it `always-fail works as before` (fun () -> (
+      Expect.is-false (Expect.always-fail |> Expect.is-pass)
+    ));
+  ];
+
+  describe `Enhanced Expect report test` [
+    it `failure message appears in report` (fun () -> (
+      let report = test `expect-fails-with-message` (fun () -> (
+        Expect.fail `custom failure reason`
+      )) |> TestCase.run |> TestReportMaker.make-report in
+      report
+      |> string-same `Test summary : 1 run, 0 success, 1 fail
+
+Test run report
+- expect-fails-with-message -> FAIL
+  custom failure reason
+
+`# |> Expect.is-true
+    ));
+  ];
+
 ] |> Test.run

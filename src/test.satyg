@@ -2,22 +2,26 @@
 @import: internal/test-case
 @import: internal/test-report-maker
 
-module Test : sig
+% MainTest module - high-level API for writing and running tests
+module Test: sig
+    val test: string -> (unit -> ExpectResult.t) -> TestCase.t
+    % Create a single test case
 
-  val test : string -> (unit -> ExpectResult.t) -> TestCase.t
-  val it : string -> (unit -> ExpectResult.t) -> TestCase.t
-  val describe : string -> TestCase.t list -> TestCase.t
+    val it: string -> (unit -> ExpectResult.t) -> TestCase.t
+    % Alias for test (should-read like "it should...")
 
-  val run : TestCase.t -> string
+    val describe: string -> TestCase.t list -> TestCase.t
+    % Group related tests under a description
 
+    val run: TestCase.t -> string
+    % Run test cases and return formatted report
 end = struct
+    let test = TestCase.test
+    let it = TestCase.test
+    let describe = TestCase.describe
 
-  let test = TestCase.test
-  let it = TestCase.test
-  let describe = TestCase.describe
-
-  let run test-case = test-case
-    |> TestCase.run
-    |> TestReportMaker.make-report
-
+    let run test-case =
+        test-case
+            |> TestCase.run
+            |> TestReportMaker.make-report
 end

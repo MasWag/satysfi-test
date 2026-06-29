@@ -1,3 +1,5 @@
+@require: option
+
 module TestCaseResultStatus : sig
 
   type t
@@ -42,6 +44,7 @@ module TestCaseResult : sig
   val of-test : (|
     description : string;
     status : TestCaseResultStatus.t;
+    message : string option;
   |) -> t
 
   val of-describe : (|
@@ -50,7 +53,7 @@ module TestCaseResult : sig
   |) -> t
 
   val cases : (|
-    test : (| description : string; status : TestCaseResultStatus.t |) -> 'a;
+    test : (| description : string; status : TestCaseResultStatus.t; message : string option |) -> 'a;
     describe : (| description : string; results : t list |) -> 'a;
   |) -> t -> 'a
 
@@ -61,7 +64,8 @@ end = struct
   type s =
   | TEST of (|
     description : string;
-    status : TestCaseResultStatus.t
+    status : TestCaseResultStatus.t;
+    message : string option;
   |)
   | DESCRIBE of (|
     description : string;

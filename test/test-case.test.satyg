@@ -1,3 +1,4 @@
+@require: option
 @import: ../src/expect
 @import: ../src/test
 
@@ -11,8 +12,10 @@ let test-case-tests = open Test in
         success = 1;
         detail = TestCaseResult.of-test (|
           description = `Mock test case`;
-          status = TestCaseResultStatus.success
+          status = TestCaseResultStatus.success;
+          message = None;
         |);
+        message = None;
       |) in
       let actual = test `Mock test case` (fun () -> (
         Expect.always-pass
@@ -28,8 +31,10 @@ let test-case-tests = open Test in
         success = 0;
         detail = TestCaseResult.of-test (|
           description = `Mock test case`;
-          status = TestCaseResultStatus.fail
+          status = TestCaseResultStatus.fail;
+          message = None;
         |);
+        message = None;
       |) in
       let actual = test `Mock test case` (fun () -> (
        Expect.always-fail
@@ -50,14 +55,17 @@ let test-case-tests = open Test in
               of-test (|
                 description = `success 1`;
                 status = TestCaseResultStatus.success;
+                message = None;
               |);
               of-test (|
                 description = `success 2`;
                 status = TestCaseResultStatus.success;
+                message = None;
               |);
               of-test (|
                 description = `fail 3`;
                 status = TestCaseResultStatus.fail;
+                message = None;
               |);
             ]
           |);

@@ -1,6 +1,8 @@
+@require: option
 @import: test-case
 @import: test-run-result
 
+% Test report generator with failure message support
 module TestReportMaker : sig
 
   val make-report : TestRunResult.t -> string
@@ -23,6 +25,8 @@ end = struct
     ^ (arabic (run-count - success-count)) ^ #` fail`#
     ^ newline
 
+
+  % Generate detailed report showing PASS/FAIL with failure messages
   let make-detail result =
     let make-indent depth =
       let-rec recur n cur =
@@ -32,9 +36,20 @@ end = struct
           recur (n - 1) (cur ^ #`  `#) in
       recur depth empty in
 
+    let format-message msg =
+      match msg with
+      | None -> empty
+      | Some m -> newline ^ (make-indent 2) ^ m
+    in
+
     let-rec make-body depth current-body result = result
       |> TestCaseResult.cases (|
         test = (fun (test) -> (
+          let message-line =
+            match test#message with
+            | None -> empty
+            | Some m -> newline ^ (make-indent 2) ^ m
+          in
           current-body
           ^ make-indent depth
           ^ `- `#
@@ -45,6 +60,7 @@ end = struct
             fail = (fun () -> `FAIL`);
           |))
           ^ newline
+          ^ message-line
         ));
         describe = (fun (describe) -> (
           let new-body = current-body

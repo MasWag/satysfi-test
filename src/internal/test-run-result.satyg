@@ -1,3 +1,4 @@
+@require: option
 @import: test-case-result
 
 module TestRunResult : sig
@@ -7,12 +8,14 @@ module TestRunResult : sig
   val make : (|
     run : int;
     success : int;
-    detail: TestCaseResult.t
+    detail: TestCaseResult.t;
+    message : (string option);
   |) -> t
 
   val count-run : t -> int
   val count-success : t -> int
   val get-detail : t -> TestCaseResult.t
+  val get-message : t -> string option
 
   val eq : t -> t -> bool
 
@@ -21,7 +24,8 @@ end = struct
   type s = (|
     run : int;
     success : int;
-    detail: TestCaseResult.t
+    detail: TestCaseResult.t;
+    message : string option;
   |)
   type t = s
 
@@ -32,6 +36,8 @@ end = struct
   let count-success result = result#success
 
   let get-detail result = result#detail
+
+  let get-message result = result#message
 
   let eq a b =
     (count-run a == count-run b)
