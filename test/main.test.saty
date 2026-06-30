@@ -8,6 +8,8 @@
 @import: test-report-maker.test
 
 open Test in
+% We cannot use Expect because it's the very test subject!
+let assert b = if b then ExpectResult.pass else  ExpectResult.fail `failure` in
 describe `satysfi-test` [
   describe `Spy` [
     it `was-run is false initially` (fun () -> (
@@ -42,13 +44,7 @@ describe `satysfi-test` [
     ));
   ];
 
-  %% Uncomment following lines to have a failing test case
-  % test `Test can fail` (fun () -> (
-  %   Expect.always-fail
-  % ));
-
   % We cannot use Expect because it's the very test subject!
-  let assert b = if b then ExpectResult.pass else  ExpectResult.fail in
   describe `Expect` [
     it `always-pass` (fun () -> (
       Expect.always-pass|> ExpectResult.is-pass |> assert
@@ -82,7 +78,7 @@ describe `satysfi-test` [
 
   describe `Enhanced Expect` [
     it `pass always passes` (fun () -> (
-      Expect.pass |> Expect.is-true
+      Expect.pass |> ExpectResult.is-pass |> assert
     ));
 
     it `fail always fails with a message` (fun () -> (
@@ -91,30 +87,32 @@ describe `satysfi-test` [
 
     it `fail carries the message` (fun () -> (
       let result = Expect.fail `my failure reason` in
-      Expect.cases (|
-        pass = (fun () -> ExpectResult.fail);
+      let is-ok = ExpectResult.cases (|
+        pass = (fun () -> false);
         fail = (fun msg -> (
           match msg with
           | Some m -> m |> string-same `my failure reason`
           | None -> false
         ));
-      |) result |> Expect.is-true
+      |) result in
+      is-ok |> assert
     ));
 
     it `on-fail replaces message on failure` (fun () -> (
       let result = Expect.on-fail `replacement` (Expect.fail `original`) in
-      Expect.cases (|
-        pass = (fun () -> ExpectResult.fail);
+      let is-ok = ExpectResult.cases (|
+        pass = (fun () -> false);
         fail = (fun msg -> (
           match msg with
           | Some m -> m |> string-same `replacement`
           | None -> false
         ));
-      |) result |> Expect.is-true
+      |) result in
+      is-ok |> assert
     ));
 
     it `on-fail preserves pass result` (fun () -> (
-      Expect.on-fail `replaced` Expect.pass |> Expect.is-true
+      Expect.on-fail `replaced` Expect.pass |> ExpectResult.is-pass |> assert
     ));
 
     it `all with empty list fails` (fun () -> (
@@ -122,111 +120,114 @@ describe `satysfi-test` [
     ));
 
     it `all with passing tests succeeds` (fun () -> (
-      Expect.is-true (Expect.all [ fun () -> Expect.pass; fun () -> Expect.pass ] () |> Expect.is-pass)
+      Expect.all [ fun _ -> Expect.pass; fun _ -> Expect.pass ] () |> ExpectResult.is-pass |> assert
     ));
 
     it `all with failing test returns first failure` (fun () -> (
-      let result = Expect.all [ fun () -> Expect.pass; fun () -> Expect.fail `third` ] () in
-      Expect.cases (|
-        pass = (fun () -> ExpectResult.fail);
-        fail = (fun msg -> (
-          match msg with
-          | Some m -> m |> string-same `third`
-          | None -> false
-        ));
-      |) result |> Expect.is-true
+      Expect.all [ fun _ -> Expect.pass; fun _ -> Expect.fail `third` ] () |> ExpectResult.is-pass |> (not) |> assert
     ));
 
     it `equal-bool true true passes` (fun () -> (
-      Expect.equal-bool true true |> Expect.is-true
+      Expect.equal-bool true true |> ExpectResult.is-pass |> assert
     ));
 
     it `equal-bool false false passes` (fun () -> (
-      Expect.equal-bool false false |> Expect.is-true
+      Expect.equal-bool false false |> ExpectResult.is-pass |> assert
     ));
 
     it `equal-bool true false fails` (fun () -> (
-      Expect.is-false (Expect.equal-bool true false |> Expect.is-pass)
+      ExpectResult.is-fail (Expect.equal-bool true false) |> assert
     ));
 
     it `equal-bool false true fails` (fun () -> (
-      Expect.is-false (Expect.equal-bool false true |> Expect.is-pass)
+      ExpectResult.is-fail (Expect.equal-bool false true) |> assert
     ));
 
     it `not-equal-bool true false passes` (fun () -> (
-      Expect.not-equal-bool true false |> Expect.is-true
+      Expect.not-equal-bool true false |> ExpectResult.is-pass |> assert
     ));
 
     it `not-equal-bool false true passes` (fun () -> (
-      Expect.not-equal-bool false true |> Expect.is-true
+      Expect.not-equal-bool false true |> ExpectResult.is-pass |> assert
     ));
 
     it `not-equal-bool true true fails` (fun () -> (
-      Expect.is-false (Expect.not-equal-bool true true |> Expect.is-pass)
+      ExpectResult.is-fail (Expect.not-equal-bool true true) |> assert
     ));
 
     it `equal-int 3 3 passes` (fun () -> (
-      Expect.equal-int 3 3 |> Expect.is-true
+      Expect.equal-int 3 3 |> ExpectResult.is-pass |> assert
     ));
 
     it `equal-int 3 4 fails with message containing expected and got` (fun () -> (
       let result = Expect.equal-int 3 4 in
-      Expect.cases (|
-        pass = (fun () -> ExpectResult.fail);
+      let is-ok = ExpectResult.cases (|
+        pass = (fun () -> false);
         fail = (fun msg -> (
           match msg with
           | Some m -> m |> string-same `Expect.equal-int failed: expected 3, got 4`
           | None -> false
         ));
-      |) result |> Expect.is-true
+      |) result in
+      is-ok |> assert
     ));
 
     it `not-equal-int 3 4 passes` (fun () -> (
-      Expect.not-equal-int 3 4 |> Expect.is-true
+      Expect.not-equal-int 3 4 |> ExpectResult.is-pass |> assert
     ));
 
     it `not-equal-int 3 3 fails` (fun () -> (
-      Expect.is-false (Expect.not-equal-int 3 3 |> Expect.is-pass)
+      ExpectResult.is-fail (Expect.not-equal-int 3 3) |> assert
     ));
 
     it `equal-string matches identical strings` (fun () -> (
-      0 == 0 |> Expect.is-true
+      Expect.equal-string `abc` `abc` |> ExpectResult.is-pass |> assert
     ));
 
     it `equal-string differs produces a failure with a message` (fun () -> (
       let result = Expect.equal-string `abc` `abd` in
-      Expect.cases (|
-        pass = (fun () -> ExpectResult.fail);
+      let is-ok = ExpectResult.cases (|
+        pass = (fun () -> false);
         fail = (fun msg -> (
           match msg with
           | Some _ -> true
           | None -> false
         ));
-      |) result |> Expect.is-true
+      |) result in
+      is-ok |> assert
     ));
 
     it `not-equal-string differs` (fun () -> (
-      Expect.not-equal-string `abc` `abd` |> Expect.is-true
+      Expect.not-equal-string `abc` `abd` |> ExpectResult.is-pass |> assert
     ));
 
     it `not-equal-string matches` (fun () -> (
-      Expect.is-false (Expect.not-equal-string `abc` `abc` |> Expect.is-pass)
+      let result = Expect.equal-string `abc` `abc` in
+      let is-ok = ExpectResult.cases (|
+        pass = (fun () -> false);
+        fail = (fun msg -> (
+          match msg with
+          | Some m -> m |> string-same `Expect.equal-string failed: expected "abc", got "abc"`
+          | None -> false
+        ));
+      |) result in
+      is-ok |> assert
     ));
 
     it `is-true works as before` (fun () -> (
-      Expect.is-true true |> Expect.is-true
+      Expect.is-true true |> ExpectResult.is-pass |> assert
     ));
 
     it `is-false works as before` (fun () -> (
-      Expect.is-false false |> Expect.is-true
+      Expect.is-false false |> ExpectResult.is-pass |> assert
     ));
 
     it `always-pass works as before` (fun () -> (
-      Expect.always-pass |> Expect.is-true
+      Expect.always-pass |> ExpectResult.is-pass |> assert
     ));
 
     it `always-fail works as before` (fun () -> (
-      Expect.is-false (Expect.always-fail |> Expect.is-pass)
+      ExpectResult.is-fail (Expect.always-fail) |> assert
     ));
   ];
 
@@ -235,15 +236,16 @@ describe `satysfi-test` [
       let report = test `expect-fails-with-message` (fun () -> (
         Expect.fail `custom failure reason`
       )) |> TestCase.run |> TestReportMaker.make-report in
-      report
+      let is-ok = report
       |> string-same `Test summary : 1 run, 0 success, 1 fail
-
+  
 Test run report
 - expect-fails-with-message -> FAIL
   custom failure reason
-
-`# |> Expect.is-true
+  
+`# in
+      is-ok |> assert
     ));
   ];
 
-] |> Test.run
+ ] |> Test.run
