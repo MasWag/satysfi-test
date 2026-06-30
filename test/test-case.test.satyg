@@ -3,82 +3,86 @@
 @import: ../src/test
 
 open Test
-
-let test-case-tests = open Test in
-  describe `TestCase` [
-    it `makes a result for a successful test case` (fun () -> (
-      let expected = TestRunResult.make (|
-        run = 1;
-        success = 1;
-        detail = TestCaseResult.of-test (|
-          description = `Mock test case`;
-          status = TestCaseResultStatus.success;
-          message = None;
-        |);
-        message = None;
-      |) in
-      let actual = test `Mock test case` (fun () -> (
-        Expect.always-pass
-      )) |> TestCase.run in
-      actual
-      |> TestRunResult.eq expected
-      |> Expect.is-true
-    ));
-
-    it `makes a result for a failing test case` (fun () -> (
-      let expected = TestRunResult.make (|
-        run = 1;
-        success = 0;
-        detail = TestCaseResult.of-test (|
-          description = `Mock test case`;
-          status = TestCaseResultStatus.fail;
-          message = None;
-        |);
-        message = None;
-      |) in
-      let actual = test `Mock test case` (fun () -> (
-       Expect.always-fail
-      )) |> TestCase.run in
-      actual
-      |> TestRunResult.eq expected
-      |> Expect.is-true
-    ));
-
-    it `makes a result for multiple test cases` (fun () -> (
-      let expected = TestRunResult.make (|
-        run = 3;
-        success = 2;
-        detail = open TestCaseResult in
-          of-describe (|
-            description = `Mock describe`;
-            results = [
-              of-test (|
-                description = `success 1`;
-                status = TestCaseResultStatus.success;
-                message = None;
-              |);
-              of-test (|
-                description = `success 2`;
-                status = TestCaseResultStatus.success;
-                message = None;
-              |);
-              of-test (|
-                description = `fail 3`;
-                status = TestCaseResultStatus.fail;
-                message = None;
-              |);
-            ]
-          |);
-      |) in
-
-      let actual = describe `Mock describe` [
-        it `success 1` (fun () -> Expect.always-pass);
-        it `success 2` (fun () -> Expect.always-pass);
-        it `fail 3` (fun () -> Expect.always-fail);
-      ] |> TestCase.run in
-
-      actual
-      |> TestRunResult.eq expected
-      |> Expect.is-true
-    ))
-  ]
+let test-case-tests =
+    open Test in
+        describe `TestCase` [
+            it `makes a result for a successful test case` (fun () ->
+                (let expected =
+                    TestRunResult.make (|
+                        run = 1;
+                        success = 1;
+                        detail =
+                            TestCaseResult.of-test (|
+                                description = `Mock test case`;
+                                status = TestCaseResultStatus.success;
+                                message = None;
+                            |);
+                        message = None;
+                    |) in
+                let actual =
+                    test `Mock test case` (fun () -> (Expect.always-pass))
+                        |> TestCase.run in
+                    actual
+                        |> Expect.equal-result expected));
+            it `makes a result for a failing test case` (fun () ->
+                (let expected =
+                    TestRunResult.make (|
+                        run = 1;
+                        success = 0;
+                        detail =
+                            TestCaseResult.of-test (|
+                                description = `Mock test case`;
+                                status = TestCaseResultStatus.fail;
+                                message = None;
+                            |);
+                        message = None;
+                    |) in
+                let actual =
+                    test `Mock test case` (fun () -> (Expect.always-fail))
+                        |> TestCase.run in
+                    actual
+                        |> Expect.equal-result expected));
+            it `makes a result for multiple test cases` (fun () ->
+                (let expected =
+                    TestRunResult.make (|
+                        run = 3;
+                        success = 2;
+                        detail =
+                            open TestCaseResult in
+                                of-describe
+                                    (|
+                                        description = `Mock describe`;
+                                        results =
+                                            [
+                                                of-test
+                                                    (|
+                                                        description = `success 1`;
+                                                        status = TestCaseResultStatus.success;
+                                                        message = None;
+                                                    |);
+                                                of-test
+                                                    (|
+                                                        description = `success 2`;
+                                                        status = TestCaseResultStatus.success;
+                                                        message = None;
+                                                    |);
+                                                of-test
+                                                    (|
+                                                        description = `fail 3`;
+                                                        status = TestCaseResultStatus.fail;
+                                                        message = None;
+                                                    |);
+                                            ];
+                                    |);
+                        message = None;
+                    |) in
+                let actual =
+                    describe `Mock describe` [
+                        it `success 1` (fun () -> Expect.always-pass);
+                        it `success 2` (fun () -> Expect.always-pass);
+                        it `fail 3` (fun () -> Expect.always-fail);
+                    ]
+                        |> TestCase.run in
+                    actual
+                        |> Expect.equal-result expected));
+        ]

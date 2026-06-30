@@ -2,16 +2,17 @@
 @import: ../src/test
 
 open Test
-
 let integration-tests =
-  test `integration works` (fun () -> (
-    let expected = `Test summary : 1 run, 1 success, 0 fail
+    test `integration works` (fun () ->
+        (let expected =
+            `Test summary : 1 run, 1 success, 0 fail
 
 Test run report
 - test case 1 -> PASS
 
 `# in
-    let actual = test `test case 1` (fun () -> Expect.always-pass)
-      |> TestCase.run
-      |> TestReportMaker.make-report in
-    (actual |> string-same expected) |> Expect.is-true))
+        let actual =
+            test `test case 1` (fun () -> Expect.always-pass)
+                |> TestCase.run
+                |> TestReportMaker.make-report in
+        Expect.equal-string expected actual))
