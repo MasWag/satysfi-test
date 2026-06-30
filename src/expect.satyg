@@ -1,190 +1,224 @@
 @require: option
 @require: list
+@import: internal/test-run-result
 
-type expect-result = (| pass : bool; message : string option |)
-
-% ExpectResult module - backward compatibility with existing API
-module ExpectResult : sig
-
-  type t
-  val pass : t
-  val fail : t
-  val is-pass : t -> bool
-  val get-msg : t -> string option
-
+module ExpectResult: sig
+    type t
+    val pass: t
+    val fail: string -> t
+    val is-pass: t -> bool
+    val is-fail: t -> bool
+    val get-msg: t -> string option
+    val cases: (|
+        pass: unit -> 'a;
+        fail: string option -> 'a;
+    |) -> t -> 'a
 end = struct
-  type t = expect-result
-  let pass = (| pass = true; message = None |)
-  let fail = (| pass = false; message = None |)
-  let is-pass t = t#pass
+    type t = (|
+        pass: bool;
+        message: string option;
+    |)
 
-  let get-msg t = t#message
+    let pass =
+        (|
+            pass = true;
+            message = None;
+        |)
+
+    let fail msg =
+        (|
+            pass = false;
+            message = Some msg;
+        |)
+    let is-pass t = t#pass
+    let is-fail t = not t#pass
+    let get-msg t = t#message
+
+    let cases branches t =
+        if t#pass
+        then
+            branches#pass ()
+        else
+            branches#fail t#message
 end
+% Main Expect module with enhanced API — uses ExpectResult.t consistently
 
-% Main Expect module with enhanced API
-module Expect : sig
+module Expect: sig
+    val pass: ExpectResult.t
+    val fail: string -> ExpectResult.t
+    val on-fail: string -> ExpectResult.t -> ExpectResult.t
+    val all: ('a -> ExpectResult.t) list -> 'a -> ExpectResult.t
+    val equal-by: ('a -> 'a -> bool) -> ('a -> string) -> 'a -> 'a -> ExpectResult.t
+    val not-equal-by: ('a -> 'a -> bool) -> ('a -> string) -> 'a -> 'a -> ExpectResult.t
+    val equal-bool: bool -> bool -> ExpectResult.t
+    val not-equal-bool: bool -> bool -> ExpectResult.t
+    val equal-int: int -> int -> ExpectResult.t
+    val not-equal-int: int -> int -> ExpectResult.t
+    val equal-string: string -> string -> ExpectResult.t
+    val not-equal-string: string -> string -> ExpectResult.t
+    val equal-result: TestRunResult.t -> TestRunResult.t -> ExpectResult.t
+    val equal-by-int: (int -> int -> bool) -> int -> int -> ExpectResult.t
+    val equal-by-string: (string -> string -> bool) -> string -> string -> ExpectResult.t
+    % Backward-compatible aliases
 
-  val pass : (| pass : bool; message : string option |)
-  val fail : string -> (| pass : bool; message : string option |)
-  val on-fail : string -> (| pass : bool; message : string option |) -> (| pass : bool; message : string option |)
-  val all : (unit -> (| pass : bool; message : string option |)) list -> (| pass : bool; message : string option |)
-
-  val equal-by :
-    ('a -> 'a -> bool) -> ('a -> string) -> 'a -> 'a -> (| pass : bool; message : string option |)
-  val not-equal-by :
-    ('a -> 'a -> bool) -> ('a -> string) -> 'a -> 'a -> (| pass : bool; message : string option |)
-
-  val equal-bool : bool -> bool -> (| pass : bool; message : string option |)
-  val not-equal-bool : bool -> bool -> (| pass : bool; message : string option |)
-
-  val equal-int : int -> int -> (| pass : bool; message : string option |)
-  val not-equal-int : int -> int -> (| pass : bool; message : string option |)
-
-  val equal-string : string -> string -> (| pass : bool; message : string option |)
-  val not-equal-string : string -> string -> (| pass : bool; message : string option |)
-
-  val equal-by-int : (int -> int -> bool) -> int -> int -> (| pass : bool; message : string option |)
-  val equal-by-string : (string -> string -> bool) -> string -> string -> (| pass : bool; message : string option |)
-
-  % Backward-compatible aliases
-  val always-pass : (| pass : bool; message : string option |)
-  val always-fail : (| pass : bool; message : string option |)
-  val is-true : bool -> (| pass : bool; message : string option |)
-  val is-false : bool -> (| pass : bool; message : string option |)
-
+    val always-pass: ExpectResult.t
+    val always-fail: ExpectResult.t
+    val is-true: bool -> ExpectResult.t
+    val is-false: bool -> ExpectResult.t
 end = struct
+    let pass = ExpectResult.pass
+    let mk-fail msg = ExpectResult.fail msg
+    let fail msg = mk-fail msg
 
-  type t = expect-result
+    let on-fail msg result =
+        if ExpectResult.is-pass result
+        then
+            result
+        else
+            mk-fail msg
 
-  let pass = (| pass = true; message = None |)
-  let mk-fail msg = (| pass = false; message = Some msg |)
+    let all expectations subject =
+        match expectations with
+            | [] -> fail (`Expect.all received an empty list of expectations`)
+            | _ ->
+                let results =
+                    expectations
+                        |> List.map (fun f -> f subject) in
+                    match results
+                            |> List.filter (fun r -> not (ExpectResult.is-pass r)) with
+                        | [] -> pass
+                        | h :: _ -> h
 
-  let fail msg = mk-fail msg
-
-  let on-fail msg result =
-    if result#pass then
-      result
-    else
-      (| pass = false; message = Some msg |)
-
-  let all expectations =
-    match expectations with
-    | [] -> fail `Expect.all received an empty list of expectations`
-    | _ ->
-      let results = expectations |> List.map (fun f -> f ()) in
-      match results |> List.filter (fun r -> not r#pass) with
-      | [] -> pass
-      | h :: _ -> h
-
-  let equal-by eq show expected actual =
-    if eq expected actual then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-by failed:
-          expected: ` ^ show expected
-          ^ `
+    let equal-by eq show expected actual =
+        if eq expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-by failed:
+          expected: ` ^ show expected ^ `
   got: ` ^ show actual)
 
-  let not-equal-by neq show expected actual =
-    if neq expected actual then
-      pass
-    else
-      mk-fail
-        (`Expect.not-equal-by failed:
-          expected: ` ^ show expected
-          ^ `
+    let not-equal-by neq show expected actual =
+        if neq expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.not-equal-by failed:
+          expected: ` ^ show expected ^ `
   got: ` ^ show actual)
 
-  let equal-bool expected actual =
-    let eq (a,b) = match (a,b) with
-      | (true, true) -> true
-      | (false, false) -> true
-      | _ -> false
-    in
-    if eq (expected, actual) then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-bool failed:
-          expected: ` ^ (if expected then `true` else `false`)
-          ^ `
-  got: ` ^ (if actual then `true` else `false`))
+    let equal-bool expected actual =
+        let eq (a,b) =
+            match (a, b) with
+                | (true, true) -> true
+                | (false, false) -> true
+                | _ -> false in
+            if eq (expected, actual)
+            then
+                pass
+            else
+                mk-fail (`Expect.equal-bool failed:
+          expected: ` ^ (if expected
+                then
+                    `true`
+                else
+                    `false`) ^ `
+  got: ` ^ (if actual
+                then
+                    `true`
+                else
+                    `false`))
 
-  let not-equal-bool expected actual =
-    let neq (a,b) = match (a,b) with
-      | (true, false) -> true
-      | (false, true) -> true
-      | _ -> false
-    in
-    if neq (expected, actual) then
-      pass
-    else
-      mk-fail
-        (`Expect.not-equal-bool failed:
-          expected: ` ^ (if expected then `true` else `false`)
-          ^ `
-  got: ` ^ (if actual then `true` else `false`))
+    let not-equal-bool expected actual =
+        let neq (a,b) =
+            match (a, b) with
+                | (true, false) -> true
+                | (false, true) -> true
+                | _ -> false in
+            if neq (expected, actual)
+            then
+                pass
+            else
+                mk-fail (`Expect.not-equal-bool failed:
+          expected: ` ^ (if expected
+                then
+                    `true`
+                else
+                    `false`) ^ `
+  got: ` ^ (if actual
+                then
+                    `true`
+                else
+                    `false`))
 
-  let equal-int expected actual =
-    if expected == actual then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
+    let equal-int expected actual =
+        if expected == actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
 
-  let not-equal-int expected actual =
-    if not (expected == actual) then
-      pass
-    else
-      mk-fail
-        (`Expect.not-equal-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
+    let not-equal-int expected actual =
+        if not (expected == actual)
+        then
+            pass
+        else
+            mk-fail (`Expect.not-equal-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
+    let show-string s = `\"`# ^ s ^ `\"`#
 
-  let show-string s =
-    `\"`# ^ s ^ `\"`#
+    let equal-string expected actual =
+        if string-same expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
 
-  let equal-string expected actual =
-    if string-same expected actual then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
+    let not-equal-string expected actual =
+        if not (string-same expected actual)
+        then
+            pass
+        else
+            mk-fail (`Expect.not-equal-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
 
-  let not-equal-string expected actual =
-    if not (string-same expected actual) then
-      pass
-    else
-      mk-fail
-        (`Expect.not-equal-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
+    let show-result res =
+        `{ run=` ^ (arabic (TestRunResult.count-run res)) ^ `, success=` ^ (arabic (TestRunResult.count-success res)) ^ `}`
 
-  let equal-by-int eq expected actual =
-    if eq expected actual then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-by-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
+    let equal-result expected actual =
+        if TestRunResult.eq expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-result failed: expected ` ^ show-result expected ^ `, got ` ^ show-result actual)
 
-  let equal-by-string eq expected actual =
-    if eq expected actual then
-      pass
-    else
-      mk-fail
-        (`Expect.equal-by-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
+    let equal-by-int eq expected actual =
+        if eq expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-by-int failed: expected ` ^ (arabic expected) ^ `, got ` ^ (arabic actual))
 
-  % Backward-compatible aliases
-  let always-pass = pass
-  let always-fail = mk-fail ` `
+    let equal-by-string eq expected actual =
+        if eq expected actual
+        then
+            pass
+        else
+            mk-fail (`Expect.equal-by-string failed: expected ` ^ show-string expected ^ `, got ` ^ show-string actual)
 
-  let is-true b =
-    if b then
-      pass
-    else
-      mk-fail `Expect.is-true: expected true, got false`
+    % Backward-compatible aliases
+    let always-pass = pass
+    let always-fail = mk-fail ` `
 
-  let is-false b =
-    if not b then
-      pass
-    else
-      mk-fail `Expect.is-false: expected false, got true`
+    let is-true b =
+        if b
+        then
+            pass
+        else
+            mk-fail `Expect.is-true: expected true, got false`
 
+    let is-false b =
+        if not b
+        then
+            pass
+        else
+            mk-fail `Expect.is-false: expected false, got true`
 end
