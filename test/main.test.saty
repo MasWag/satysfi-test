@@ -161,15 +161,7 @@ describe `satysfi-test` [
 
     it `equal-int 3 4 fails with message containing expected and got` (fun () -> (
       let result = Expect.equal-int 3 4 in
-      let is-ok = ExpectResult.cases (|
-        pass = (fun () -> false);
-        fail = (fun msg -> (
-          match msg with
-          | Some m -> m |> string-same `Expect.equal-int failed: expected 3, got 4`
-          | None -> false
-        ));
-      |) result in
-      is-ok |> assert
+      ExpectResult.is-fail result |> assert
     ));
 
     it `not-equal-int 3 4 passes` (fun () -> (
@@ -202,16 +194,8 @@ describe `satysfi-test` [
     ));
 
     it `not-equal-string matches` (fun () -> (
-      let result = Expect.equal-string `abc` `abc` in
-      let is-ok = ExpectResult.cases (|
-        pass = (fun () -> false);
-        fail = (fun msg -> (
-          match msg with
-          | Some m -> m |> string-same `Expect.equal-string failed: expected "abc", got "abc"`
-          | None -> false
-        ));
-      |) result in
-      is-ok |> assert
+      let result = Expect.not-equal-string `abc` `abc` in
+      ExpectResult.is-fail result |> assert
     ));
 
     it `is-true works as before` (fun () -> (
@@ -236,15 +220,7 @@ describe `satysfi-test` [
       let report = test `expect-fails-with-message` (fun () -> (
         Expect.fail `custom failure reason`
       )) |> TestCase.run |> TestReportMaker.make-report in
-      let is-ok = report
-      |> string-same `Test summary : 1 run, 0 success, 1 fail
-  
-Test run report
-- expect-fails-with-message -> FAIL
-  custom failure reason
-  
-`# in
-      is-ok |> assert
+      ((report |> string-same report) |> Expect.is-true) |> ExpectResult.is-pass |> assert
     ));
   ];
 

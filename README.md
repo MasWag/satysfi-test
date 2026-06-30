@@ -8,6 +8,7 @@ This library provides an elm-test-inspired unit testing framework for [SATySFi](
 - Support for custom equality functions with explicitComparators  
 - Failure messages included in test reports
 - Typed equality helpers: `equal-int`, `equal-string`, `equal-bool`
+- Test result assertions: `equal-result` for comparing `TestRunResult.t` values
 
 ## Basic Usage
 
@@ -57,4 +58,13 @@ it `list properties` (fun () -> (
     |> all [ fun l -> length l |> equal-int 3
              ; fun l -> List.hd l |> equal-int 1 ]
 ))
+```
+
+### Test Result Equality
+
+Verify the outcome of a test execution by comparing `TestRunResult` records.
+```satysfi
+let expected = TestRunResult.make (| run=1; success=1; detail=...; message=None |) in
+let actual = test `My Case` (fun () -> Expect.always-pass) |> TestCase.run in
+expect actual |> equal-result expected
 ```
